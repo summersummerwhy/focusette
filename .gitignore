@@ -65,6 +65,7 @@ server/.tmp/
 # TypeScript build cache
 server/.turbo/
 server/.tsbuildinfo
+server/.vscode
 
 # --------------------------
 # macOS / System
