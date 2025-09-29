@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -17,8 +16,9 @@ datasource db {
 model User {
   id         String   @id @default(cuid())
   provider   String // "google" "kakao" "naver"
-  providerId String  @unique
-  email      String?  @unique
+  providerId String  
+  @@unique([provider, providerId], name: "provider_providerId")
+  email      String?  
   password   String?
   nickname   String
   character  String // 캐릭터 이미지 id or url
@@ -29,7 +29,8 @@ model User {
   focusRecords FocusSession[]
   authSessions AuthSession[]
   devices      Device[]
-  friendships  Friendship[]      @relation("UserFriendships")
+  friendships  Friendship[] @relation("UserFriendships")
+  friends      Friendship[] @relation("FriendOf")
   coins        CoinTransaction[]
 }
 
@@ -37,7 +38,6 @@ model AuthSession {
   id           String   @id @default(cuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id])
-  accessToken  String   @unique
   refreshToken String?  @unique
   createdAt    DateTime @default(now())
   expiresAt    DateTime
@@ -77,7 +77,8 @@ model Friendship {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation("UserFriendships", fields: [userId], references: [id])
-  friendId  String // 친구 userId
+  friendId  String
+  friend    User     @relation("FriendOf", fields: [friendId], references: [id])
   status    String // "pending" | "accepted"
   createdAt DateTime @default(now())
 }

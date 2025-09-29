@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, Param } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -6,35 +6,22 @@ export class AuthController {
 
     constructor(private readonly authService: AuthService) { }
 
-
-    @Post('login/google')
-    async googleLogin(@Body() body: { accessToken: string }) {
-        return this.authService.login('google', body.accessToken);
+    @Post('login/:provider')
+    async login(@Body() body: { accessToken: string }, @Param('provider') provider: 'google' | 'kakao' | 'naver') {
+        return this.authService.login(provider, body.accessToken);
     }
 
-    @Post('login/kakao')
-    async kakaoLogin(@Body() body: { accessToken: string }) {
-        return this.authService.login('kakao', body.accessToken);
+    @Post('signup/:provider')
+    async signup(
+        @Body() body: { accessToken: string; nickname: string; character: string },
+        @Param('provider') provider: 'google' | 'kakao' | 'naver',
+    ) {
+        return this.authService.signup(provider, body.accessToken, body.nickname, body.character);
     }
 
-    @Post('login/naver')
-    async naverLogin(@Body() body: { accessToken: string }) {
-        return this.authService.login('naver', body.accessToken);
-    }
-
-    @Post('signup/google')
-    async googleSignup(@Body() body: { accessToken: string }) {
-        return this.authService.signup('google', body.accessToken);
-    }
-
-    @Post('signup/kakao')
-    async kakaoSignup(@Body() body: { accessToken: string }) {
-        return this.authService.signup('kakao', body.accessToken);
-    }
-
-    @Post('signup/naver')
-    async naverSignup(@Body() body: { accessToken: string }) {
-        return this.authService.signup('naver', body.accessToken);
+    @Post('refresh')
+    async refresh(@Body() body: { refreshToken: string }) {
+        return this.authService.refresh(body.refreshToken);
     }
 
     @Post('logout')

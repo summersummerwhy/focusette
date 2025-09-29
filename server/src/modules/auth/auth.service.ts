@@ -1,11 +1,39 @@
 import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { v4 as uuid } from 'uuid';
+import { JwtService } from '@nestjs/jwt'
 import axios from 'axios';
 
 @Injectable()
 export class AuthService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private jwtService: JwtService,
+    ) { }
+
+    // JWT 발급
+    private async createTokens(userId: string) {
+        const payload = { sub: userId };
+
+        const accessToken = this.jwtService.sign(payload, {
+            expiresIn: '15m',
+        });
+
+        const refreshToken = this.jwtService.sign(payload, {
+            expiresIn: '7d',
+        });
+
+        // DB에 refreshToken 저장
+        await this.prisma.authSession.create({
+            data: {
+                userId,
+                refreshToken,
+                expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7)
+            },
+        });
+
+        return { accessToken, refreshToken };
+    }
+
     // OAuth 프로필 가져오기
     private async fetchProfile(provider: 'google' | 'kakao' | 'naver', accessToken: string) {
         if (provider === 'google') {
@@ -35,68 +63,60 @@ export class AuthService {
         throw new UnauthorizedException('Unsupported provider');
     }
 
-    // 로그인만
+
+    // 로그인
     async login(provider: 'google' | 'kakao' | 'naver', accessToken: string) {
         const profile = await this.fetchProfile(provider, accessToken);
-
         const user = await this.prisma.user.findUnique({
             where: { provider_providerId: { provider, providerId: String(profile.id) } },
         });
 
         if (!user) {
-            // 계정 없음 → 회원가입 안내
-            throw new NotFoundException({
-                message: 'No account found. Please sign up first.',
-                provider,
-                providerId: profile.id,
-                email: profile.email,
-            });
+            throw new NotFoundException({ signupRequired: true, provider, profile });
         }
 
-        return this.createSession(user.id);
+        return this.createTokens(user.id);
     }
 
     // 회원가입
-    async signup(provider: 'google' | 'kakao' | 'naver', accessToken: string) {
+    async signup(provider: 'google' | 'kakao' | 'naver', accessToken: string, nickname: string, character: string) {
         const profile = await this.fetchProfile(provider, accessToken);
 
         let user = await this.prisma.user.findUnique({
             where: { provider_providerId: { provider, providerId: String(profile.id) } },
         });
 
-        if (user) {
-            // 이미 가입된 계정
-            return this.createSession(user.id);
+        if (!user) {
+            user = await this.prisma.user.create({
+                data: {
+                    provider,
+                    providerId: String(profile.id),
+                    email: profile.email,
+                    nickname,
+                    character,
+                },
+            });
         }
 
-        user = await this.prisma.user.create({
-            data: {
-                provider,
-                providerId: String(profile.id),
-                email: profile.email,
-                nickname: profile.name,
-                character: 'default',
-            },
-        });
-
-        return this.createSession(user.id);
+        return this.createTokens(user.id);
     }
 
-    // 세션 생성 공통 함수
-    private async createSession(userId: number) {
-        const newAccessToken = uuid();
-        const refreshToken = uuid();
-        const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7); // 7일
+    // refresh token으로 access 재발급
+    async refresh(refreshToken: string) {
+        try {
+            const payload = this.jwtService.verify(refreshToken);
+            const session = await this.prisma.authSession.findUnique({ where: { refreshToken } });
 
-        await this.prisma.authSession.create({
-            data: { userId, accessToken: newAccessToken, refreshToken, expiresAt },
-        });
+            if (!session) throw new UnauthorizedException('Invalid refresh token');
 
-        return { accessToken: newAccessToken, refreshToken, userId };
+            return this.createTokens(payload.sub);
+        } catch {
+            throw new UnauthorizedException('Invalid refresh token');
+        }
     }
 
-    async logout(accessToken: string) {
-        await this.prisma.authSession.delete({ where: { accessToken } });
+    async logout(refreshToken: string) {
+        await this.prisma.authSession.delete({ where: { refreshToken } });
         return { message: 'Logged out' };
     }
 
