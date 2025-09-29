@@ -27,6 +27,8 @@ client/ios/Flutter/engine/
 # Android Studio
 client/.android/
 client/.gradle/
+client/.ios/
+client/.metadata
 client/local.properties
 
 # --------------------------
@@ -67,6 +69,10 @@ server/.turbo/
 server/.tsbuildinfo
 server/.vscode
 
+# Prisma generated client
+server/prisma/generated/
+server/node_modules/.prisma/
+
 # --------------------------
 # macOS / System
 # --------------------------
@@ -74,6 +80,13 @@ server/.vscode
 .DS_Store
 Thumbs.db
 *.swp
+
+# --------------------------
+# Docker
+# --------------------------
+
+server/.docker/
+docker-compose.override.yml
 
 # --------------------------
 # IDE / Editor (공통)
