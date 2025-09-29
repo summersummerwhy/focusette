@@ -16,8 +16,8 @@ datasource db {
 
 model User {
   id         String   @id @default(cuid())
-  provider   String?
-  providerId String?  @unique
+  provider   String // "google" "kakao" "naver"
+  providerId String  @unique
   email      String?  @unique
   password   String?
   nickname   String
