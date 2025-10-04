@@ -52,7 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: '집중 시간',
                         subtitle: '한 세트당 집중할 시간',
                         value: _focusMinutes,
-                        min: 30,
+                        min: 5,
                         max: 90,
                         divisions: 12, // 5분 단위
                         unit: '분',
