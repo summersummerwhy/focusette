@@ -9,7 +9,7 @@ class TimerScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Focus Forest 🌳'),
+        title: const Text('Focusette'),
         centerTitle: true,
         actions: [
           // 세션 종료 버튼
