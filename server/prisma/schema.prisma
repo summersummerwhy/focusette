@@ -1,0 +1,93 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(cuid())
+  provider   String // "google" "kakao" "naver"
+  providerId String  
+  @@unique([provider, providerId], name: "provider_providerId")
+  email      String?  
+  password   String?
+  nickname   String
+  character  String // 캐릭터 이미지 id or url
+  roomImage  String? // 방 이미지 id or url
+  createdAt  DateTime @default(now())
+
+  categories   Category[]
+  focusRecords FocusSession[]
+  authSessions AuthSession[]
+  devices      Device[]
+  friendships  Friendship[] @relation("UserFriendships")
+  friends      Friendship[] @relation("FriendOf")
+  coins        CoinTransaction[]
+}
+
+model AuthSession {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  refreshToken String?  @unique
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  deviceInfo   String?
+}
+
+model Device {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  deviceType String // "ios" | "android"
+  pushToken  String? // 푸시 알림용 토큰
+  createdAt  DateTime @default(now())
+}
+
+model Category {
+  id           String         @id @default(cuid())
+  userId       String
+  user         User           @relation(fields: [userId], references: [id])
+  name         String
+  FocusSession FocusSession[]
+}
+
+model FocusSession {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  startedAt  DateTime
+  endedAt    DateTime?
+  earnedCoin Int       @default(0)
+  success    Boolean   @default(true)
+}
+
+model Friendship {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("UserFriendships", fields: [userId], references: [id])
+  friendId  String
+  friend    User     @relation("FriendOf", fields: [friendId], references: [id])
+  status    String // "pending" | "accepted"
+  createdAt DateTime @default(now())
+}
+
+model CoinTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Int
+  type      String // "reward" | "purchase" | "exchange"
+  createdAt DateTime @default(now())
+}

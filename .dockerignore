@@ -1,0 +1,14 @@
+node_modules
+dist
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
+*.log
+.nyc_output
+coverage
+.env
+.env.*
+.prisma
+.tmp
+.DS_Store

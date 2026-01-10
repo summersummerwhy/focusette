@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:15
+    container_name: prisma_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: devpw
+      POSTGRES_DB: devdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U devuser -d devdb" ]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  server:
+    build: .
+    container_name: focus_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # Compose 네트워크 내부에서는 host를 localhost가 아니라 서비스명(db)로!
+      - DATABASE_URL=postgresql://devuser:devpw@db:5432/devdb
+      # 맥/도커 파일변경 감지 원활하게
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    volumes:
+      - .:/app
+      - /app/node_modules # 컨테이너 내 의존성 보존
+    depends_on:
+      db:
+        condition: service_healthy
+    # 시작 시 마이그레이션 → dev 서버
+    command: sh -c "yarn prisma:deploy || yarn prisma:migrate && yarn start:dev"
+
+volumes:
+  pgdata:
